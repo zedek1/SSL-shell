@@ -1,11 +1,24 @@
 #include <stdio.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
+#ifdef WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+
+#else
+#include <unistd.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#define closesocket(s) close(s)
+static int WSACleanup() { return 0; }
+#endif
+
 #include "shell.h"
+
+//definitions here for now
+#define SERVER_HOST "127.0.0.1"
+#define SERVER_PORT "8080"
 
 SSL_CTX *create_context()
 {
@@ -28,14 +41,16 @@ SSL_CTX *create_context()
 
 int main(int argc, char **argv)
 {
+    #ifdef WIN32
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
     {
         fprintf(stderr, "WSAStartup error\n");
         exit(EXIT_FAILURE);
     }
+    #endif
 
-    SOCKET sock = INVALID_SOCKET;
+    int sock = -1;
     SSL_CTX *ctx;
     SSL *ssl;
 
@@ -46,7 +61,7 @@ int main(int argc, char **argv)
 
     // create socket
     sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock == INVALID_SOCKET)
+    if (sock == -1)
     {
         fprintf(stderr, "Socket creation failed\n");
         WSACleanup();
@@ -71,7 +86,7 @@ int main(int argc, char **argv)
     }
 
     // connect to the server
-    if (connect(sock, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) == SOCKET_ERROR)
+    if (connect(sock, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) == -1)
     {
         fprintf(stderr, "Connection failed\n");
         closesocket(sock);
